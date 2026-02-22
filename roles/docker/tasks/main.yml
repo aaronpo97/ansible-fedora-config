@@ -1,0 +1,60 @@
+---
+- name: Install dnf-plugins-core
+  dnf:
+    name: dnf-plugins-core
+    state: present
+
+- name: Add Docker CE repository
+  get_url:
+    url: https://download.docker.com/linux/fedora/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+    mode: "0644"
+
+- name: Install Docker packages
+  dnf:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+- name: Enable and start Docker
+  systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Add current user to docker group
+  user:
+    name: "{{ ansible_user_id }}"
+    groups: docker
+    append: true
+
+- name: Get latest lazydocker release info
+  uri:
+    url: https://api.github.com/repos/jesseduffield/lazydocker/releases/latest
+    return_content: true
+  register: lazydocker_release
+  when: lazydocker_version is not defined or lazydocker_version | default(None) == None
+
+- name: Set lazydocker tag from variable or latest
+  set_fact:
+    lazydocker_tag: "{{ (lazydocker_version is defined and lazydocker_version) | ternary(lazydocker_version, lazydocker_release.json.tag_name) }}"
+
+- name: Download lazydocker
+  get_url:
+    url: "https://github.com/jesseduffield/lazydocker/releases/download/{{ lazydocker_tag }}/lazydocker_{{ lazydocker_tag | regex_replace('^v', '') }}_Linux_x86_64.tar.gz"
+    dest: /tmp/lazydocker.tar.gz
+    mode: "0644"
+    checksum: "{{ lazydocker_checksum | default(omit) }}"
+
+- name: Extract and install lazydocker
+  unarchive:
+    src: /tmp/lazydocker.tar.gz
+    dest: /usr/local/bin
+    include:
+      - lazydocker
+    remote_src: true
+    mode: "0755"

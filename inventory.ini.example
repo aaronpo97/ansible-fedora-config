@@ -1,0 +1,2 @@
+[webservers]
+your-host-name ansible_host=YOUR_HOST_IP ansible_port=1997 ansible_user=YOUR_SSH_USER ansible_python_interpreter=/usr/bin/python3 ansible_shell_executable=/bin/bash

@@ -1,0 +1,17 @@
+---
+- name: Configure Nginx and Docker on Fedora
+  hosts: webservers
+  become: true # run as sudo
+
+  pre_tasks:
+    - name: Ensure remote_tmp directory exists
+      ansible.builtin.raw: mkdir -p /tmp/.ansible/tmp
+      become: false
+      changed_when: false
+
+  roles:
+    - nginx
+    - docker
+    - dotfiles
+    - fail2ban
+    - security

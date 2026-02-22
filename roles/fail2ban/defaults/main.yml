@@ -1,0 +1,3 @@
+---
+# Default SSH port used by fail2ban config. Keep in sync with security role.
+ssh_port: 1997

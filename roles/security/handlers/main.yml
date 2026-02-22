@@ -1,0 +1,11 @@
+---
+- name: Restart sshd
+  systemd:
+    name: sshd
+    state: restarted
+
+- name: Restart cockpit
+  systemd:
+    name: cockpit.socket
+    state: restarted
+    daemon_reload: true

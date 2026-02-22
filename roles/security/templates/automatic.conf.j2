@@ -1,0 +1,10 @@
+[commands]
+upgrade_type = {{ upgrade_type | default('security') }}
+apply_updates = {{ apply_updates | default('yes') }}
+download_updates = {{ download_updates | default('yes') }}
+
+[emitters]
+system_name = default
+
+[base]
+debuglevel = 1

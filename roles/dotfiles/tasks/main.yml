@@ -1,0 +1,73 @@
+---
+- name: Install zsh
+  dnf:
+    name: zsh
+    state: present
+
+- name: Install GNU stow
+  dnf:
+    name: stow
+    state: present
+
+- name: Install git (required for cloning dotfiles)
+  dnf:
+    name: git
+    state: present
+
+- name: Install neovim
+  dnf:
+    name: neovim
+    state: present
+
+- name: Install fastfetch
+  dnf:
+    name: fastfetch
+    state: present
+
+- name: Install oh-my-zsh
+  git:
+    repo: https://github.com/ohmyzsh/ohmyzsh.git
+    dest: "/home/{{ ansible_user }}/.oh-my-zsh"
+    depth: 1
+    update: false
+  become: false
+
+- name: Clone dotfiles repository
+  git:
+    repo: https://github.com/aaronpo97/dotfiles.git
+    dest: "/home/{{ ansible_user }}/dotfiles"
+    update: true
+  become: false
+
+- name: Back up existing .zshrc if not a symlink
+  shell: |
+    if [ -f /home/{{ ansible_user }}/.zshrc ] && [ ! -L /home/{{ ansible_user }}/.zshrc ]; then
+      mv /home/{{ ansible_user }}/.zshrc /home/{{ ansible_user }}/.zshrc.bak
+    fi
+  become: false
+  args:
+    executable: /bin/bash
+
+- name: Apply dotfiles with stow (git, zsh)
+  shell: cd /home/{{ ansible_user }}/dotfiles && stow git zsh
+  become: false
+  args:
+    executable: /bin/bash
+
+- name: Ensure ~/.config directory exists
+  file:
+    path: "/home/{{ ansible_user }}/.config"
+    state: directory
+    mode: "0755"
+  become: false
+
+- name: Apply dotfiles with stow (config -> ~/.config)
+  shell: cd /home/{{ ansible_user }}/dotfiles && stow --target=/home/{{ ansible_user }}/.config config
+  become: false
+  args:
+    executable: /bin/bash
+
+- name: Change default shell to zsh
+  user:
+    name: "{{ ansible_user }}"
+    shell: /bin/zsh

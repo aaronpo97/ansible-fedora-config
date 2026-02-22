@@ -1,0 +1,7 @@
+---
+# Defaults for docker role
+# Set `lazydocker_version` to a specific tag (e.g. v0.10.7) to pin the release.
+# Leave undefined or null to use the latest release from GitHub.
+lazydocker_version: null
+# Provide checksum in the form 'sha256:<hex>' to verify the download. Leave null to skip verification.
+lazydocker_checksum: null

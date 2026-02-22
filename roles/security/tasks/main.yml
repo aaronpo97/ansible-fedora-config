@@ -1,0 +1,106 @@
+---
+# NOTE: After this role runs, update ansible_port in your inventory.ini to match
+# the new SSH port, and update any port forwarding rules on your VM/router.
+
+- name: Set SSH port to 1997
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?Port "
+    line: "Port 1997"
+    state: present
+  notify: Restart sshd
+
+- name: Allow SSH port 1997 in SELinux
+  shell: semanage port -a -t ssh_port_t -p tcp 1997 || semanage port -m -t ssh_port_t -p tcp 1997
+  when: ansible_selinux.status == "enabled" and ansible_selinux.mode == "enforcing"
+  changed_when: true
+
+- name: Open port 1997 in firewalld
+  ansible.posix.firewalld:
+    port: 1997/tcp
+    permanent: true
+    state: enabled
+    immediate: true
+
+- name: Close default SSH port 22 in firewalld
+  ansible.posix.firewalld:
+    service: ssh
+    permanent: true
+    state: disabled
+    immediate: true
+
+# # --- SSH hardening ---
+# - name: Disable SSH password authentication
+#   lineinfile:
+#     path: /etc/ssh/sshd_config
+#     regexp: '^#?PasswordAuthentication '
+#     line: 'PasswordAuthentication no'
+#     state: present
+#   notify: Restart sshd
+
+# - name: Disable SSH root login
+#   lineinfile:
+#     path: /etc/ssh/sshd_config
+#     regexp: '^#?PermitRootLogin '
+#     line: 'PermitRootLogin no'
+#     state: present
+#   notify: Restart sshd
+
+# - name: Set SSH MaxAuthTries to 3
+#   lineinfile:
+#     path: /etc/ssh/sshd_config
+#     regexp: '^#?MaxAuthTries '
+#     line: 'MaxAuthTries 3'
+#     state: present
+#   notify: Restart sshd
+
+# --- dnf-automatic (security updates only) ---
+- name: Deploy dnf-automatic configuration from template
+  ansible.builtin.template:
+    src: automatic.conf.j2
+    dest: /etc/dnf/automatic.conf
+    mode: "0644"
+    owner: root
+    group: root
+  vars:
+    upgrade_type: security
+    apply_updates: yes
+    download_updates: yes
+- name: Install dnf-automatic
+  dnf:
+    name: dnf-automatic
+    state: present
+
+- name: Enable and start dnf-automatic timer
+  systemd:
+    name: dnf-automatic.timer
+    enabled: true
+    state: started
+
+# --- Cockpit: install and restrict to localhost ---
+- name: Install cockpit
+  dnf:
+    name: cockpit
+    state: present
+
+- name: Enable and start cockpit
+  systemd:
+    name: cockpit.socket
+    enabled: true
+    state: started
+
+- name: Ensure cockpit.socket.d directory exists
+  file:
+    path: /etc/systemd/system/cockpit.socket.d
+    state: directory
+    mode: "0755"
+
+- name: Restrict cockpit to localhost only
+  copy:
+    dest: /etc/systemd/system/cockpit.socket.d/listen.conf
+    content: |
+      [Socket]
+      ListenStream=
+      ListenStream=127.0.0.1:9090
+    mode: "0644"
+  notify: Restart cockpit

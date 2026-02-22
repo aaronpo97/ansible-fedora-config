@@ -1,0 +1,35 @@
+---
+- name: Install nginx
+  dnf:
+    name: nginx
+    state: present
+
+- name: Enable and start nginx
+  systemd:
+    name: nginx
+    enabled: true
+    state: started
+
+- name: Open firewall for HTTP and HTTPS
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: true
+    state: enabled
+    immediate: true
+  loop:
+    - http
+    - https
+
+- name: Allow nginx to make network connections (SELinux)
+  ansible.posix.seboolean:
+    name: httpd_can_network_connect
+    state: true
+    persistent: true
+  when: ansible_selinux.status == "enabled" and ansible_selinux.mode == "enforcing"
+
+- name: Install certbot and nginx plugin
+  dnf:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
