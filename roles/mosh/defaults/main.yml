@@ -1,0 +1,4 @@
+---
+# Default variables for mosh role
+mosh_firewalld_zone: public
+mosh_udp_port_range: 60000-61000/udp

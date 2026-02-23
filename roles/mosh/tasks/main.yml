@@ -1,0 +1,22 @@
+---
+- name: Install mosh
+  package:
+    name: mosh
+    state: present
+
+- name: Ensure firewalld is enabled and running (if present)
+  service:
+    name: firewalld
+    enabled: true
+    state: started
+  become: true
+  when: ansible_facts['os_family'] == 'RedHat' or ansible_facts['distribution'] == 'Fedora'
+
+- name: Open mosh UDP port range in firewalld
+  ansible.posix.firewalld:
+    port: "{{ mosh_udp_port_range }}"
+    permanent: true
+    immediate: true
+    state: enabled
+    zone: "{{ mosh_firewalld_zone }}"
+  when: ansible_facts['os_family'] == 'RedHat' or ansible_facts['distribution'] == 'Fedora'

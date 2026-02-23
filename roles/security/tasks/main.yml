@@ -30,6 +30,13 @@
     immediate: true
 
 # # --- SSH hardening ---
+# SSH into your server and test the new port.
+# Keep the session open and setup SSH keys before closing it.
+# If you get locked out, use the open session to revert the changes or access
+# the server via console/VM interface to fix it.
+#
+#
+#
 # - name: Disable SSH password authentication
 #   lineinfile:
 #     path: /etc/ssh/sshd_config
