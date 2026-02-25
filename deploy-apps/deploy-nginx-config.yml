@@ -1,0 +1,50 @@
+---
+- name: Deploy custom nginx configuration from sites.conf
+  hosts: webservers
+  become: true
+  tasks:
+    - name: Copy nginx config file
+      ansible.builtin.copy:
+        src: ../deploy-apps/sites.conf
+        dest: /etc/nginx/conf.d/sites.conf
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Ensure /var/www/ayerble.com exists
+      ansible.builtin.file:
+        path: /var/www/ayerble.com
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Copy static site content to /var/www/ayerble.com
+      ansible.builtin.synchronize:
+        src: ../deploy-apps/server-home/
+        dest: /var/www/ayerble.com/
+        recursive: yes
+        delete: yes
+
+    - name: Test nginx configuration
+      ansible.builtin.command: nginx -t
+      register: nginx_test
+      changed_when: false
+      failed_when: nginx_test.rc != 0
+
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+
+    - name: Obtain or renew SSL certificates with certbot (nginx plugin)
+      ansible.builtin.command:
+        cmd: >-
+          certbot run --nginx --non-interactive --agree-tos --redirect
+          -m aaron.po97@gmail.com
+          -d ayerble.com -d www.ayerble.com
+          -d aaronwilliampo.com -d www.aaronwilliampo.com
+          -d git.aaronwilliampo.com -d yerb-engine.aaronwilliampo.com
+      register: certbot_result
+      changed_when: "'Certificate not yet due for renewal' not in certbot_result.stdout"
+      failed_when: certbot_result.rc != 0
